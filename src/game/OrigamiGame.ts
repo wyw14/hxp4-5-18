@@ -3,6 +3,7 @@ import { SeededRandom, generateSeed } from '../utils/random';
 import { OrigamiSVG } from '../components/OrigamiSVG';
 import { Model3DViewer } from '../components/Model3DViewer';
 import { FoldStateManager } from './FoldStateManager';
+import { FoldProgressGauge } from '../components/FoldProgressGauge';
 
 export interface GameState {
   currentQuestion: Question | null;
@@ -22,6 +23,7 @@ export class OrigamiGame {
   private currentQuestionIndex: number = 0;
   private origamiSVG: OrigamiSVG | null = null;
   private foldStateManager: FoldStateManager | null = null;
+  private progressGauge: FoldProgressGauge | null = null;
   private modelViewers: Model3DViewer[] = [];
   private shuffledOptions: string[] = [];
 
@@ -63,10 +65,7 @@ export class OrigamiGame {
               <span class="stat-label">得分</span>
               <span class="stat-value" id="score-display">0</span>
             </span>
-            <span class="stat-item">
-              <span class="stat-label">步数</span>
-              <span class="stat-value" id="steps-display">0/0</span>
-            </span>
+            <div class="stat-item stat-gauge" id="progress-gauge-container"></div>
           </div>
         </div>
 
@@ -160,6 +159,14 @@ export class OrigamiGame {
 
   private setupFoldState(question: Question): void {
     this.foldStateManager = new FoldStateManager(question);
+
+    const gaugeContainer = this.container.querySelector('#progress-gauge-container') as HTMLElement;
+    if (gaugeContainer) {
+      if (this.progressGauge) {
+        this.progressGauge.destroy();
+      }
+      this.progressGauge = new FoldProgressGauge(gaugeContainer, question.maxSteps);
+    }
   }
 
   private setupModelOptions(question: Question): void {
@@ -393,9 +400,8 @@ export class OrigamiGame {
   }
 
   private updateStepsDisplay(): void {
-    const stepsDisplay = this.container.querySelector('#steps-display');
-    if (stepsDisplay && this.state.currentQuestion) {
-      stepsDisplay.textContent = `${this.state.stepsUsed}/${this.state.currentQuestion.maxSteps}`;
+    if (this.progressGauge && this.state.currentQuestion) {
+      this.progressGauge.update(this.state.stepsUsed, this.state.currentQuestion.maxSteps);
     }
   }
 
@@ -433,6 +439,7 @@ export class OrigamiGame {
 
   destroy(): void {
     this.origamiSVG?.destroy();
+    this.progressGauge?.destroy();
     this.modelViewers.forEach(viewer => viewer.destroy());
     this.container.innerHTML = '';
   }
